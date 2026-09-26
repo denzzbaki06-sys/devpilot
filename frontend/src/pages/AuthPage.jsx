@@ -38,7 +38,7 @@ export default function AuthPage({ register = false }) {
       const from = location.state?.from;
       const safe =
         typeof from === "string" &&
-        /^\/(dashboard|ask|search|repositories(?:\/\d+(?:\/(ask|search))?)?|github|settings)(?:\?[^#]*)?$/.test(
+        /^\/(dashboard|ask|search|repositories(?:\/\d+(?:\/(ask|search|architecture|pull-requests(?:\/\d+)?))?)?|github|settings)(?:\?[^#]*)?$/.test(
           from,
         );
       navigate(safe ? from : "/dashboard", { replace: true });

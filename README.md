@@ -2,10 +2,15 @@
 
 **AI-Powered Code Intelligence Workspace**
 
-Connect a GitHub repository, index its source code, search semantically,
-and ask grounded questions with real file and line references.
+## Overview
 
-## Core features
+DevPilot connects repository source, pull request changes and architecture evidence
+in one developer workspace. Connect GitHub, index source code, search by meaning,
+ask source-backed questions, review PRs and explore an interactive architecture map.
+AI output is an additional engineering signal; validated citations establish its
+source references, not the correctness of every conclusion.
+
+## Key Features
 
 - User authentication with BCrypt, JWT access tokens and rotating refresh tokens
 - GitHub OAuth and public/private repositories accessible to the connected user
@@ -14,27 +19,42 @@ and ask grounded questions with real file and line references.
 - Grounded repository Q&A with validated source IDs and actual file/line references
 - Prompt-injection-aware context handling and explicit insufficient-evidence responses
 - Staged indexing and atomic publication for safe reindexing
-- React workspace for repositories, indexing status, Search and Ask
+- Read-only AI PR review with normalized diffs and validated diff/source references
+- Deterministic architecture extraction and an interactive, searchable dependency graph
+- Architecture-aware AI Q&A, Explain Component/Connections and graph-linked citations
+- React workspace for repositories, indexing, Ask, Search, PRs and Architecture
 - Dockerized full stack and GitHub Actions backend/frontend checks
 
-## Architecture
+## Architecture / How It Works
 
-```text
-Browser: React / Nginx :5174
-             | /api/* (same origin)
-      Spring Boot API :8080 (host :8083)
-             |
-  +----------+----------+----------+---------+
-  |   Auth   |  GitHub  | Indexing |   RAG   |
-  +----------+----------+----------+---------+
-             |                         |
-   PostgreSQL 17 + pgvector      Embedding / LLM providers
-      :5432 (host :5434)         (HTTPS calls from backend)
-
-GitHub repository -> Trees/Blobs API -> filtering -> parsing/chunking
-  -> embeddings -> pgvector -> semantic retrieval -> bounded context
-  -> grounded LLM response -> source ID validation -> source-backed answer
+```mermaid
+flowchart TD
+  UI[React workspace / Nginx] --> API[Spring Boot API / JWT ownership]
+  API --> GH[GitHub API / OAuth]
+  GH --> ING[Bounded repository ingestion]
+  ING --> PARSE[Language-aware parsing and chunking]
+  PARSE --> EMB[Embedding provider]
+  PARSE --> DB[(PostgreSQL + pgvector)]
+  EMB --> DB
+  API --> SEARCH[Semantic search]
+  DB --> SEARCH
+  SEARCH --> QA[Grounded repository Q&A]
+  GH --> PR[PR diffs and review context]
+  SEARCH --> PR
+  DB --> ARCH[Deterministic architecture analysis]
+  ARCH --> MAP[Interactive architecture graph]
+  ARCH --> AA[Architecture-aware Q&A]
+  SEARCH --> AA
+  QA --> LLM[Chat provider / structured response]
+  PR --> LLM
+  AA --> LLM
+  LLM --> VALIDATE[Backend reference validation]
+  VALIDATE --> UI
+  MAP --> UI
 ```
+
+Architecture extraction and graph display work without an LLM. AI explanations
+combine the actual graph with bounded source retrieval. PR operations are read-only.
 
 The backend owns authorization and every repository query is scoped to its user.
 Files, chunks and embeddings are staged per indexing job, then published together in
@@ -46,7 +66,7 @@ Java parsing uses the JDK compiler API **only to parse**, with annotation proces
 disabled. Repository code is never compiled or executed. Python and JS/TS use
 heuristics; unsupported structures fall back to overlapping line chunks.
 
-## Stack
+## Tech Stack
 
 | Area | Technologies |
 | --- | --- |
@@ -56,7 +76,7 @@ heuristics; unsupported structures fall back to overlapping line chunks.
 | AI | OpenAI-compatible embedding and chat completion providers; explicit RAG services |
 | Infrastructure | Docker Compose, Nginx, GitHub Actions |
 
-## Quick start with Docker
+## Getting Started — Docker
 
 Clone your published repository URL, then enter its directory:
 
@@ -101,10 +121,10 @@ docker compose stop
 The backend image builds with Java 21/Maven wrapper, then runs as UID 10001 using a
 stripped Java runtime that retains `jdk.compiler` for AST parsing. Frontend assets
 are built with `npm ci` and served by Nginx. Nginx proxies `/api/` without changing
-the path, allows 180 seconds for AI responses and provides SPA history fallback.
+the path, allows up to 900 seconds for bounded AI review requests and provides SPA history fallback.
 It disables access logs to avoid recording OAuth callback query strings.
 
-## Environment variables
+## Configuration
 
 Copy `.env.example` for the complete list. Compose passes variables explicitly to
 the backend; it does not bake secrets into either image. Spring Boot also accepts
@@ -123,18 +143,20 @@ build-time configuration and must never contain secrets.
 | `GITHUB_REDIRECT_URI` | Docker: `http://localhost:5174/api/github/callback`; manual: `http://localhost:8083/api/github/callback`. Must match the OAuth application. |
 | `FRONTEND_BASE_URL` | Trusted frontend origin for OAuth success/failure redirects; default `http://localhost:5174`. |
 | `CORS_ALLOWED_ORIGINS` | Explicit comma-separated origin allowlist for manual/cross-origin use. No wildcard credentials. |
-| `OPENAI_API_KEY` | Required for indexing embeddings, semantic search and Ask; optional at startup. |
+| `OPENAI_API_KEY` | Required for embeddings, semantic search, Q&A and AI reviews/explanations; optional at startup. |
 | `EMBEDDING_PROVIDER`, `EMBEDDING_BASE_URL`, `EMBEDDING_MODEL` | Defaults: `openai`, `https://api.openai.com/v1`, `text-embedding-3-small`. |
 | `EMBEDDING_DIMENSIONS` | Must remain 1536 for the current schema; changing model requires compatible dimensions and reindexing. |
 | `EMBEDDING_BATCH_SIZE`, `EMBEDDING_MAX_RETRIES`, `EMBEDDING_RETRY_DELAY_MILLIS` | Defaults: 50, 3, 500; bounded batching/retries. |
 | `CHAT_PROVIDER`, `CHAT_BASE_URL`, `CHAT_MODEL` | Defaults: `openai`, `https://api.openai.com/v1`, `gpt-5-mini`; separate chat abstraction. |
 | `CHAT_TIMEOUT_SECONDS` | Default 60. |
 | `RAG_TOP_K`, `RAG_MAX_CONTEXT_CHARS`, `RAG_MAX_QUESTION_CHARS` | Defaults: 8, 30000, 4000. Compose builds frontend question limit to match. |
+| `CHAT_MAX_RETRIES`, `CHAT_RETRY_DELAY_MILLIS` | Shared chat retries: 2 retries, 250 ms incremental delay. |
+| `REVIEW_*`, `ARCHITECTURE_*`, `ARCHITECTURE_ASK_*` | Explicit file/graph/context/deadline limits in `.env.example`; see [implementation limits](docs/intelligence.md). |
 | `INDEXING_*` | File/total byte/chunk/line/job limits and overlap; every existing knob is listed in `.env.example`. |
 | `VITE_API_BASE_URL` | Manual: `http://localhost:8083`. Docker sets `/`; API methods already include `/api`, so `/api` as the base would duplicate it. |
 | `VITE_AI_MAX_QUESTION_CHARS` | Manual frontend question bound, default 4000; align with backend and rebuild after changes. |
 
-### GitHub OAuth
+## GitHub Integration
 
 Register a GitHub OAuth application using the callback for the selected mode.
 Docker sends connect and callback requests through the same Nginx origin, preserving
@@ -172,6 +194,9 @@ auth session behavior, cancellation, source rendering and frontend configuration
 
 ## API overview
 
+Swagger/OpenAPI UI is not included; the route table and linked contracts document
+the implemented API.
+
 Protected requests require `Authorization: Bearer <access-token>`.
 
 | Feature | Main endpoints |
@@ -189,7 +214,7 @@ published snapshot. Search returns real code chunks and similarity (not confiden
 Ask returns answer, only cited source metadata, configured model and `grounded`.
 No Swagger UI is included.
 
-## RAG grounding
+## Grounded Repository Q&A
 
 ```text
 Question -> query embedding -> pgvector cosine search -> ranked whole chunks
@@ -206,7 +231,7 @@ oversized chunks are skipped rather than silently clipped. `grounded=true` means
 citation validation succeeded; it is **not proof of correctness** or a guarantee
 against prompt injection. Answers require human review.
 
-## Security and deployment boundaries
+## Security
 
 - BCrypt password hashing; JWT access tokens; rotating opaque refresh tokens stored
   only as hashes in the database.
@@ -228,7 +253,7 @@ HTTPS GitHub callback so the state cookie is Secure. Do not expose the database
 publicly. Authentication throttling, managed secret rotation and TLS termination are
 not provided here. Do not dump resolved Compose environment configuration into logs.
 
-## Tests and CI
+## Testing and CI
 
 Backend integration tests need a disposable PostgreSQL database with pgvector and
 migration privileges. Tests create and clean their own fixture users/repositories;
@@ -252,8 +277,79 @@ them separately; use both checks before release.
 
 ## Version and release
 
-Backend and frontend are version **1.0.0**. Existing Flyway V1–V9 migrations are
+Backend, frontend and Compose image metadata are prepared for **1.1.0**. Existing Flyway V1–V9 migrations are
 immutable; schema changes require a new migration. No release/tag is created by
-this setup. Before publication, run CI on GitHub, configure and test real OAuth/AI
-flows in your environment, review dependencies and deployment settings, and choose
-a license. This repository does not currently grant an open-source license.
+this preparation. Before publication, run CI on GitHub and review deployment settings.
+Live GitHub/OpenAI validation is pending until credentials and an indexed repository
+are available; deterministic test providers are not proof of live integration.
+Choose a license before describing the project as open source. This repository does not currently grant an open-source license.
+
+## Repository Indexing
+
+Indexing runs asynchronously with visible status and safe failure messages. File
+filters skip sensitive paths, binaries, generated/vendor content and oversized input.
+Java uses parse-only JDK APIs; JS/TS/Python use lightweight symbol extraction, with
+line chunk fallback. Files/chunks/embeddings publish atomically from staging.
+A failed reindex preserves the prior complete snapshot. No repository code executes.
+
+## Semantic Search
+
+Describe behavior or a concept to retrieve code chunks with real paths, line spans,
+language, symbols and similarity. Queries use the configured embedding model and
+pgvector; schema dimensions are fixed at 1536. The UI requires a READY repository.
+No results is a valid state; rephrase the query or check indexing rather than expect
+fabricated matches.
+
+## AI Pull Request Review
+
+Browse open PRs and inspect changed-file diffs with separate old/new line numbers.
+For READY repositories, Analyze Pull Request combines bounded diff hunks and semantic
+context, then validates model references against actual changed lines and source
+chunks. Findings include severity, explanation, recommendation and evidence. Skipped
+files and snapshot mismatches remain visible. No comments, reviews, patches or PR
+mutations are sent to GitHub.
+
+## Architecture Intelligence
+
+Deterministic source analysis produces real components, directed relationships,
+entry points and evidence. Graph and Components views support search, filters,
+source locations and detail panels. React Flow is lazy-loaded; Dagre layout runs in
+a bounded Web Worker. No architecture embeddings or additional vector tables exist.
+
+## AI Architecture Q&A
+
+Ask a repository-wide question, select a component, or use Explain Component and
+Explain Connections. Backend-resolved graph neighborhoods and semantic code chunks
+form bounded context. A/E/S citations select actual nodes, relationships and source
+locations; Show in graph highlights existing components. Reindex changes invalidate
+stale responses. Missing providers return an explicit configuration error, never a
+sample answer. All AI questions are single-turn.
+
+Detailed [API contracts, source trust rules, budgets and analysis limitations](docs/intelligence.md)
+cover PR and architecture workflows. The [frontend guide](frontend/README.md) describes
+UI behavior and graph testing boundaries.
+
+## Limitations
+
+- Live GitHub access needs configured OAuth and user authorization; AI features need
+  a configured embedding/chat provider. Local startup works without either.
+- Java/Spring architecture extraction is strongest; JS/TS/Python support is lighter.
+  Static relationships do not prove runtime call paths. Unresolved edges stay unresolved.
+- Large repositories/PRs use explicit budgets and can omit evidence. Warnings describe
+  scope. AI review can miss issues; valid citations do not prove every model claim.
+- Source filtering and prompt isolation are defense in depth, not complete secret
+  detection or a universal prompt-injection defense. Review private code/provider policy.
+- Source navigation currently exposes/copies file and line metadata; a full source
+  viewer is not implemented. AI history, agents and automatic code changes are absent.
+- Local Compose is not a hardened public deployment. See security requirements above.
+
+## Screenshots
+
+No product screenshots are committed yet. This README does not reference placeholder
+or nonexistent image files. Screenshots are optional release documentation.
+
+## Roadmap / Future Work
+
+The next step is final validation, CI and v1.1.0 publication after explicit release
+authorization. Live external integration validation remains pending. Further product
+features are outside this release-polish scope.

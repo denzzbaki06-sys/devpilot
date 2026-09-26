@@ -9,8 +9,12 @@ public class RagContextBuilder {
         @Override public String toString() { return "RagContext[REDACTED]"; }
     }
     public Context build(List<Result> results, int budget) {
+        return buildOrdered(results.stream().sorted(Comparator.comparingDouble(Result::similarity).reversed().thenComparing(Result::chunkId)).toList(), budget);
+    }
+    /** Shared whole-chunk budgeting for workflows with an explicit source-priority order. */
+    public Context buildOrdered(List<Result> results, int budget) {
         var text = new StringBuilder(); var sources = new ArrayList<Result>(); var seen = new HashSet<Long>();
-        for (var chunk : results.stream().sorted(Comparator.comparingDouble(Result::similarity).reversed().thenComparing(Result::chunkId)).toList()) {
+        for (var chunk : results) {
             if (!seen.add(chunk.chunkId()) || chunk.content().isBlank()) continue;
             // Whole chunks only: references always describe exactly the original code span.
             String fence = "```";

@@ -21,6 +21,7 @@ export function intelligenceError(error) {
   const configuration = [
     "Chat API key is not configured",
     "Chat provider configuration is invalid",
+    "Structured chat workflow is not supported by this provider",
     "Embedding provider is not configured",
     "Embedding API key is not configured",
     "Embedding dimensions do not match database vector(1536)",
@@ -43,6 +44,6 @@ export function intelligenceError(error) {
   if (status === 502)
     return "The AI provider could not complete the request. Please try again or check the instance configuration.";
   if (status === 503)
-    return "AI provider is unavailable or not configured for this DevPilot instance.";
+    return "AI provider is temporarily unavailable. Please try again later.";
   return "Unable to complete the AI request. Check your connection and try again.";
 }

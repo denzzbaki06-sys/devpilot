@@ -6,7 +6,7 @@ import {
   fireEvent,
   act,
 } from "@testing-library/react";
-import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
+import { MemoryRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import GitHubPage from "../src/pages/GitHubPage";
 import RepositoriesPage from "../src/pages/RepositoriesPage";
 import RepositoryDetailPage from "../src/pages/RepositoryDetailPage";
@@ -327,4 +327,15 @@ it("OAuth URL is restricted to the genuine authorization endpoint", () => {
     authorizationDestination("https://evil.example/login/oauth/authorize"),
   ).toThrow();
   expect(oauthNotice("?error=anything").type).toBe("error");
+});
+
+it("repository section follows the URL and browser history", async () => {
+  function History() { const navigate = useNavigate(); return <button onClick={() => navigate(-1)}>History back</button>; }
+  render(<MemoryRouter initialEntries={["/repositories/12?section=indexing"]}><History /><Location /><Routes><Route path="/repositories/:id" element={<RepositoryDetailPage />} /></Routes></MemoryRouter>);
+  const indexing = await screen.findByRole("button", { name: "Indexing", exact: true });
+  expect(indexing.getAttribute("aria-pressed")).toBe("true");
+  fireEvent.click(screen.getByRole("button", { name: "Overview", exact: true }));
+  expect(screen.getByTestId("location").textContent).toBe("/repositories/12");
+  fireEvent.click(screen.getByRole("button", { name: "History back" }));
+  expect(indexing.getAttribute("aria-pressed")).toBe("true");
 });

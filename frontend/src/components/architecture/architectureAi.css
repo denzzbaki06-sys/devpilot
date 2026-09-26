@@ -1,0 +1,14 @@
+.architecture-ai { margin-top: 24px; padding: 24px; min-width: 0; }
+.architecture-ai-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.architecture-ai h2 { font-size: 20px; margin: 10px 0; }
+.architecture-ai-context { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+.architecture-ai-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+.architecture-ai label { display: block; font-size: 12px; margin: 16px 0 8px; }
+.architecture-ai textarea { box-sizing: border-box; width: 100%; resize: vertical; background: #111622; color: #e2e8f0; border: 1px solid #364155; border-radius: 8px; padding: 12px; font: inherit; }
+.architecture-ai textarea:focus-visible { outline: 2px solid #a78bfa; outline-offset: 2px; }
+.architecture-ai-answer { padding-top: 18px; margin-top: 18px; border-top: 1px solid #30374a; overflow-wrap: anywhere; }
+.architecture-ai-answer details { font-size: 12px; color: #a3b0c4; margin-top: 12px; }
+.architecture-ai [role=alert] { color: #fda4af; font-size: 13px; }
+.architecture-ai-source { max-width: 640px; }
+.architecture-ai-source h3 { font-size: 13px; margin-top: 18px; }
+.arch-canvas .arch-answer-reference .arch-node { outline: 3px solid #a3e635; outline-offset: 4px; }

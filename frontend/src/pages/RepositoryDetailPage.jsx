@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   GitBranch,
   FolderGit2,
@@ -27,13 +27,22 @@ import {
 } from "../components/RepositoryUi";
 import ConfirmDialog from "../components/ConfirmDialog";
 export default function RepositoryDetailPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("section") === "indexing" ? "indexing" : "overview";
+  function setTab(next) {
+    setSearchParams(current => {
+      const params = new URLSearchParams(current);
+      if (next === "indexing") params.set("section", "indexing");
+      else params.delete("section");
+      return params;
+    });
+  }
   const { id } = useParams(),
     navigate = useNavigate(),
     index = useIndexStatus(id);
   const [repo, setRepo] = useState(null),
     [error, setError] = useState(""),
     [version, setVersion] = useState(0),
-    [tab, setTab] = useState("overview"),
     [busy, setBusy] = useState(null),
     [confirm, setConfirm] = useState(false);
   useEffect(() => {
@@ -135,6 +144,8 @@ export default function RepositoryDetailPage() {
         >
           Indexing
         </button>
+        <Link to={`/repositories/${id}/pull-requests`}>Pull Requests</Link>
+        <Link to={`/repositories/${id}/architecture`}>Architecture</Link>
         <Link to={`/repositories/${id}/ask`}>
           <Sparkles size={14} />
           Ask

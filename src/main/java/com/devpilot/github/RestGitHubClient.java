@@ -88,16 +88,10 @@ public class RestGitHubClient implements GitHubClient {
     private ResponseEntity<String> send(RestClient.RequestHeadersSpec<?> request, boolean exchange) {
         try {
             return request.retrieve().onStatus(status -> !status.is2xxSuccessful(), (req, res) -> {
-                int status = res.getStatusCode().value();
-                if (status == 429 || (status == 403 && ("0".equals(res.getHeaders().getFirst("X-RateLimit-Remaining"))
-                        || res.getHeaders().containsHeader("Retry-After")))) {
-                    throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "GitHub rate limit reached; retry later");
-                }
-                if (exchange) throw new ApiException(HttpStatus.BAD_GATEWAY, "GitHub authorization code exchange failed");
-                if (status == 401) throw new ApiException(HttpStatus.UNAUTHORIZED, "GitHub authorization expired or revoked; reconnect GitHub");
-                if (status == 403) throw new ApiException(HttpStatus.FORBIDDEN, "GitHub access forbidden or rate limited");
-                if (status == 404) throw new ApiException(HttpStatus.NOT_FOUND, "GitHub repository not found or inaccessible");
-                throw new ApiException(HttpStatus.BAD_GATEWAY, "GitHub request failed");
+                // Preserve the established repository-specific 404 contract.
+                if (!exchange && res.getStatusCode().value() == 404)
+                    throw new ApiException(HttpStatus.NOT_FOUND, "GitHub repository not found or inaccessible");
+                throw GitHubErrors.failure(res.getStatusCode().value(), res.getHeaders(), exchange);
             }).toEntity(String.class);
         } catch (RestClientException ex) {
             throw new ApiException(HttpStatus.BAD_GATEWAY, "GitHub is unavailable; retry later");

@@ -1,0 +1,80 @@
+.arch-map-workspace { margin-top: 22px; min-width: 0; }
+.arch-map-summary { display: flex; justify-content: space-between; gap: 20px; padding: 8px 0 20px; flex-wrap: wrap; }
+.arch-map-summary p { margin: 8px 0 0; font-size: 13px; }
+.arch-map-summary p span { margin: 0 10px; color: #64748b; }
+.arch-snapshot { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12px; color: #9cabc1; }
+.arch-snapshot button { display: flex; align-items: center; gap: 8px; background: #171d2b; color: #c5b5ff; border: 1px solid #30374a; border-radius: 6px; padding: 7px 10px; cursor: pointer; }
+.arch-snapshot details code { display: block; max-width: 320px; overflow-wrap: anywhere; }
+.arch-snapshot [role=status] { flex-basis: 100%; }
+.arch-map-warnings { padding: 12px 16px; margin-bottom: 16px; border: 1px solid #665034; background: #201c15; border-radius: 8px; color: #dac7a1; font-size: 12px; }
+.arch-map-warnings ul { max-height: 130px; overflow: auto; margin-bottom: 0; }
+.arch-map-warnings summary, .arch-filters summary, .arch-map-footer summary { cursor: pointer; }
+.arch-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.arch-toolbar .secondary-button { display: inline-flex; gap: 7px; align-items: center; min-height: 40px; padding: 9px 12px; font-size: 12px; }
+.arch-search { flex: 1 1 240px; display: flex; gap: 9px; align-items: center; background: #111622; border: 1px solid #30374a; border-radius: 8px; padding: 0 12px; color: #8897af; }
+.arch-search input { min-width: 0; width: 100%; background: transparent; color: #e2e8f0; border: 0; outline: 0; padding: 12px 0; font: inherit; font-size: 13px; }
+.arch-search:focus-within { outline: 2px solid #a78bfa; outline-offset: 2px; }
+.arch-filters { position: relative; z-index: 6; font-size: 12px; }
+.arch-filters > summary { border: 1px solid #30374a; border-radius: 8px; padding: 12px; }
+.arch-filters[open] { flex-basis: 100%; border: 1px solid #30374a; border-radius: 8px; padding: 12px; }
+.arch-filters[open] > summary { border: 0; padding: 0 0 10px; }
+.arch-filters fieldset { display: flex; flex-wrap: wrap; gap: 12px; border: 0; margin: 6px 0; padding: 8px 0; }
+.arch-filters label { display: inline-flex; align-items: center; gap: 5px; }
+.arch-filters input { accent-color: #a78bfa; }
+.arch-search-results { border: 1px solid #30374a; background: #101620; border-radius: 10px; padding: 12px; margin-bottom: 16px; }
+.arch-search-results > p { font-size: 12px; color: #a3b0c4; margin: 0 0 8px; }
+.arch-search-results ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); list-style: none; padding: 0; margin: 0; max-height: 220px; overflow: auto; gap: 5px; }
+.arch-search-results button { width: 100%; padding: 10px; text-align: left; display: flex; flex-wrap: wrap; gap: 7px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: #e2e8f0; cursor: pointer; }
+.arch-search-results button:hover { background: #1c2435; border-color: #39445b; }
+.arch-search-results small { flex-basis: 100%; color: #98a6bc; overflow-wrap: anywhere; }
+.arch-search-results span { color: #b7a5f4; font-size: 10px; }
+.arch-map-and-detail { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
+.arch-map-and-detail.has-detail { grid-template-columns: minmax(0, 1fr) 320px; }
+.arch-canvas { height: 610px; min-width: 0; position: relative; border: 1px solid #2e374c; border-radius: 12px; overflow: hidden; background: #0d121b; }
+.arch-canvas-message { display: grid; place-content: center; height: 100%; padding: 32px; color: #a7b4c9; font-size: 14px; text-align: center; }
+.arch-canvas .react-flow { --xy-background-color-default: #0d121b; --xy-controls-button-background-color-default: #1c2435; --xy-controls-button-color-default: #e2e8f0; --xy-controls-button-border-color-default: #364155; --xy-minimap-background-color-default: #151c29; }
+.arch-canvas .react-flow__node { border: 0; border-radius: 9px; transition: opacity 120ms; }
+.arch-node { width: 248px; height: 92px; box-sizing: border-box; border: 1px solid #39445a; border-left: 3px solid var(--node-color); border-radius: 9px; padding: 12px 14px; background: #171e2b; color: #e2e8f0; box-shadow: 0 6px 18px #0003; }
+.arch-node-type { display: flex; align-items: center; gap: 6px; color: var(--node-color); font-size: 9px; letter-spacing: .9px; }
+.arch-node-type > span { width: 5px; height: 5px; border-radius: 1px; background: currentColor; }
+.arch-node strong { display: block; font-size: 14px; margin: 7px 0 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.arch-node small { display: block; font-size: 9px; color: #91a0b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.arch-node .react-flow__handle { background: #7b8ba6; border: 1px solid #0d121b; width: 5px; height: 5px; }
+.arch-canvas .selected .arch-node { border: 2px solid #c4b5fd; box-shadow: 0 0 0 4px #a78bfa22; }
+.arch-canvas .arch-incoming .arch-node { border-color: #fbbf24; border-style: dashed; }
+.arch-canvas .arch-outgoing .arch-node { border-color: #22d3ee; }
+.arch-canvas .arch-both .arch-node { border-color: #c4b5fd; }
+.arch-canvas .arch-subdued { opacity: .28; }
+.arch-canvas .react-flow__node:focus-visible { outline: 3px solid #c4b5fd; outline-offset: 4px; }
+.arch-canvas .react-flow__edge:focus-visible .react-flow__edge-path { stroke: #fff; stroke-width: 3; }
+.arch-detail { min-width: 0; padding: 20px; max-height: 610px; overflow: auto; }
+.arch-detail-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.arch-detail-heading .icon-button { display: grid; place-items: center; width: 30px; height: 30px; background: #222b3b; color: #dbe4f2; border: 1px solid #3b475c; border-radius: 6px; cursor: pointer; }
+.arch-detail h2 { font-size: 19px; margin: 16px 0; overflow-wrap: anywhere; }
+.arch-detail h3 { font-size: 12px; margin: 22px 0 10px; color: #acbad0; }
+.arch-detail p, .arch-detail li { overflow-wrap: anywhere; font-size: 12px; }
+.arch-detail-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.arch-detail .outline-badge { font-size: 10px; }
+.arch-source { margin: 16px 0; }
+.arch-source-button { display: flex; align-items: flex-start; gap: 9px; background: #111925; border: 1px solid #2f3e56; border-radius: 8px; color: #c6b5fa; text-align: left; padding: 12px; width: 100%; font: inherit; font-size: 11px; overflow-wrap: anywhere; cursor: pointer; }
+.arch-source-button span { min-width: 0; }
+.arch-source-button svg { flex-shrink: 0; }
+.arch-source small { display: block; margin-top: 6px; color: #a8b5c9; }
+.arch-source [role=status] { font-size: 11px; }
+.arch-dependency-list, .arch-routes { list-style: none; padding: 0; }
+.arch-dependency-list li { border-top: 1px solid #283345; padding: 10px 0; }
+.arch-dependency-list button { text-align: left; border: 0; padding: 0; background: none; color: #d7e1f0; cursor: pointer; font: inherit; }
+.arch-dependency-list .arch-relation-link { display: block; margin-top: 6px; color: #ab98e2; font-size: 10px; }
+.arch-routes li { padding: 8px 0; }
+.arch-routes small { display: block; color: #98a6bc; margin-top: 5px; }
+.arch-entry { border-left: 2px solid #f472b6; padding-left: 10px; color: #f1aacd; }
+.arch-map-footer { display: flex; align-items: start; flex-wrap: wrap; gap: 8px 16px; padding: 12px 0; color: #98a6bc; font-size: 11px; }
+.arch-map-footer p { margin: 0; }
+.arch-map-footer > span { margin-left: auto; }
+.arch-map-footer ul { display: flex; flex-wrap: wrap; list-style: none; padding: 10px 0 0; gap: 12px; }
+.arch-map-footer li { display: flex; gap: 5px; align-items: center; }
+.arch-map-footer li span { width: 7px; height: 7px; border-radius: 2px; }
+.arch-map-workspace button:focus-visible, .arch-map-workspace summary:focus-visible { outline: 2px solid #c4b5fd; outline-offset: 3px; }
+@media (max-width: 1150px) { .arch-map-and-detail.has-detail { grid-template-columns: minmax(0, 1fr); } .arch-detail { max-height: 450px; } }
+@media (max-width: 650px) { .arch-canvas { height: 460px; } .arch-search-results ul { grid-template-columns: 1fr; } .arch-canvas .react-flow__minimap { display: none; } .arch-map-footer > span { margin-left: 0; } }
+@media (prefers-reduced-motion: reduce) { .arch-canvas .react-flow__node { transition: none; } }

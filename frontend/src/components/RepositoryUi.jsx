@@ -67,3 +67,10 @@ export function PageHeading({ eyebrow, title, description, children }) {
     </div>
   );
 }
+
+export function RepositoryNavigation({ id, active }) {
+  const sections = [["overview", "Overview", ""], ["indexing", "Indexing", "?section=indexing"], ["pull-requests", "Pull Requests", "/pull-requests"], ["architecture", "Architecture", "/architecture"], ["ask", "Ask", "/ask"], ["search", "Search", "/search"]];
+  return <nav className="detail-tabs" aria-label="Repository sections">
+    {sections.map(([key, label, suffix]) => <Link key={key} to={`/repositories/${id}${suffix}`} aria-current={active === key ? "page" : undefined}>{label}</Link>)}
+  </nav>;
+}

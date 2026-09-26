@@ -1,18 +1,18 @@
 // Backend contract: plain text with server-appended [1] references into sources order.
 // No HTML interpretation, no external links, no invented source IDs.
-export default function AnswerText({ answer, sources, onCitation }) {
+export default function AnswerText({ answer, sources, references, onCitation }) {
   function prose(text, key) {
     return (
       <div className="answer-prose" key={key}>
-        {text.split(/(\[\d+\])/g).map((part, index) => {
-          const match = /^\[([1-9]\d*)\]$/.exec(part);
-          const citation = match ? Number(match[1]) : 0;
-          return citation > 0 && citation <= sources.length ? (
+        {text.split(/(\[(?:[AES])?\d+\])/g).map((part, index) => {
+          const match = /^\[((?:[AES])?[1-9]\d*)\]$/.exec(part);
+          const citation = match ? (references ? match[1] : Number(match[1])) : 0;
+          return (references ? Boolean(references[citation]) : citation > 0 && citation <= sources.length) ? (
             <button
               key={index}
               className="citation-chip"
               onClick={() => onCitation(citation)}
-              aria-label={`Go to source ${citation}`}
+              aria-label={references ? `Go to citation ${citation}` : `Go to source ${citation}`}
             >
               {part}
             </button>

@@ -17,7 +17,7 @@ import {
   intelligenceError,
   similarityLabel,
 } from "../utils/intelligence";
-import { PageHeading, LoadingPanel } from "../components/RepositoryUi";
+import { PageHeading, LoadingPanel, RepositoryNavigation } from "../components/RepositoryUi";
 import { ErrorMessage } from "../components/Feedback";
 import {
   RepositoryContext,
@@ -179,6 +179,7 @@ function IntelligenceWorkspace({ id, kind }) {
   return (
     <div className={`intelligence-page ${kind}-workspace`}>
       <RepositoryContext repo={repo} kind={kind} />
+      <RepositoryNavigation id={repo.id} active={kind} />
       <PageHeading
         eyebrow={isAsk ? "UNDERSTANDING, WITH EVIDENCE" : "EXPLORE YOUR SOURCE"}
         title={isAsk ? "Ask DevPilot" : "Semantic Search"}

@@ -13,16 +13,20 @@ import org.springframework.web.client.*;
 import tools.jackson.databind.ObjectMapper;
 
 @Component
-@EnableConfigurationProperties({ChatProperties.class, RagProperties.class})
+@EnableConfigurationProperties({ChatProperties.class, RagProperties.class, ChatRetryProperties.class})
 public class OpenAiChatProvider implements LlmProvider {
     private final ChatProperties properties;
     private final RestClient client;
     private final ObjectMapper json;
-    @Autowired public OpenAiChatProvider(ChatProperties properties, ObjectMapper json) {
-        this(properties, client(properties), json);
+    private final ChatRetryProperties retry;
+    @Autowired public OpenAiChatProvider(ChatProperties properties, ObjectMapper json, ChatRetryProperties retry) {
+        this(properties, client(properties), json, retry);
     }
     public OpenAiChatProvider(ChatProperties properties, RestClient client, ObjectMapper json) {
-        this.properties = properties; this.client = client; this.json = json;
+        this(properties, client, json, new ChatRetryProperties(2, 250));
+    }
+    public OpenAiChatProvider(ChatProperties properties, RestClient client, ObjectMapper json, ChatRetryProperties retry) {
+        this.properties = properties; this.client = client; this.json = json; this.retry = retry;
     }
     private static RestClient client(ChatProperties p) {
         var factory = new JdkClientHttpRequestFactory(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5))
@@ -41,26 +45,8 @@ public class OpenAiChatProvider implements LlmProvider {
         var schema = Map.of("type", "object", "additionalProperties", false,
                 "properties", Map.of("statements", Map.of("type", "array", "items", statement), "insufficientContext", Map.of("type", "boolean")),
                 "required", List.of("statements", "insufficientContext"));
-        var body = Map.of("model", model(), "max_completion_tokens", 8192,
-                "messages", List.of(Map.of("role", "system", "content", systemInstruction),
-                        Map.of("role", "user", "content", json.writeValueAsString(Map.of("question", question, "repositoryContext", context)))),
-                "response_format", Map.of("type", "json_schema", "json_schema", Map.of("name", "grounded_answer", "strict", true, "schema", schema)));
         try {
-            byte[] bytes = client.post().uri(properties.baseUrl().replaceAll("/+$", "") + "/chat/completions")
-                    .header("Authorization", "Bearer " + properties.apiKey()).contentType(MediaType.APPLICATION_JSON).body(body)
-                    .exchange((request, response) -> {
-                        int status = response.getStatusCode().value();
-                        if (status == 429) throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "Chat provider rate limited; retry later");
-                        if (status < 200 || status >= 300) throw new ApiException(HttpStatus.BAD_GATEWAY, "Chat provider request failed");
-                        byte[] result = response.getBody().readNBytes(262145);
-                        if (result.length > 262144) throw invalid();
-                        return result;
-                    });
-            var root = json.readTree(bytes);
-            if (root == null || !root.path("choices").isArray() || root.path("choices").size() != 1) throw invalid();
-            var choice = root.path("choices").get(0);
-            if (!"stop".equals(choice.path("finish_reason").asText()) || !choice.path("message").path("content").isTextual()) throw invalid();
-            var data = json.readTree(choice.path("message").path("content").asText());
+            var data = completeStructured(systemInstruction, Map.of("question", question, "repositoryContext", context), "grounded_answer", schema);
             if (data == null || !data.path("statements").isArray() || data.path("statements").size() > 30
                     || !data.path("insufficientContext").isBoolean()) throw invalid();
             var statements = new ArrayList<Statement>();
@@ -75,7 +61,42 @@ public class OpenAiChatProvider implements LlmProvider {
             }
             // Report configured model identity; provider-supplied metadata never controls the API response.
             return new Completion(List.copyOf(statements), data.path("insufficientContext").asBoolean(), model());
-        } catch (ResourceAccessException ex) { throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "Chat provider timed out or is unavailable"); }
-        catch (RestClientException | tools.jackson.core.JacksonException ex) { throw invalid(); }
+        } catch (tools.jackson.core.JacksonException ex) { throw invalid(); }
+    }
+    @Override public tools.jackson.databind.JsonNode completeStructured(String systemInstruction, Map<String, Object> input, String schemaName, Map<String, Object> schema) {
+        requireConfigured();
+        var body = Map.of("model", model(), "max_completion_tokens", 8192,
+                "messages", List.of(Map.of("role", "system", "content", systemInstruction),
+                        Map.of("role", "user", "content", json.writeValueAsString(input))),
+                "response_format", Map.of("type", "json_schema", "json_schema", Map.of("name", schemaName, "strict", true, "schema", schema)));
+        for (int attempt=0;;attempt++) {
+            try {
+                byte[] bytes = client.post().uri(properties.baseUrl().replaceAll("/+$", "") + "/chat/completions")
+                        .header("Authorization", "Bearer " + properties.apiKey()).contentType(MediaType.APPLICATION_JSON).body(body)
+                        .exchange((request, response) -> {
+                            int status = response.getStatusCode().value();
+                            if (status == 429 || status >= 500) throw new TransientFailure(status == 429 ? 429 : 502);
+                            if (status < 200 || status >= 300) throw new ApiException(HttpStatus.BAD_GATEWAY, "Chat provider request failed");
+                            byte[] result = response.getBody().readNBytes(262145);
+                            if (result.length > 262144) throw invalid(); return result;
+                        });
+                var root=json.readTree(bytes);
+                if(root==null || !root.path("choices").isArray() || root.path("choices").size()!=1) throw invalid();
+                var choice=root.path("choices").get(0);
+                if(!"stop".equals(choice.path("finish_reason").asText()) || !choice.path("message").path("content").isTextual()) throw invalid();
+                var result=json.readTree(choice.path("message").path("content").asText());
+                if(result==null || !result.isObject()) throw invalid(); return result;
+            } catch (TransientFailure ex) {
+                if(attempt>=retry.maxRetries()) throw new ApiException(HttpStatus.valueOf(ex.status), ex.status==429 ? "Chat provider rate limited; retry later" : "Chat provider request failed");
+            } catch (ResourceAccessException ex) {
+                if(attempt>=retry.maxRetries()) throw new ApiException(HttpStatus.GATEWAY_TIMEOUT,"Chat provider timed out or is unavailable");
+            } catch (RestClientException | tools.jackson.core.JacksonException ex) { throw invalid(); }
+            try { Thread.sleep((long)retry.delayMillis() * (attempt+1)); }
+            catch(InterruptedException ex) { Thread.currentThread().interrupt(); throw new ApiException(HttpStatus.GATEWAY_TIMEOUT,"Chat provider request interrupted"); }
+        }
+    }
+    private static final class TransientFailure extends RuntimeException {
+        final int status;
+        TransientFailure(int status) { super("Transient chat provider failure"); this.status=status; }
     }
 }

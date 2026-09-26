@@ -50,3 +50,34 @@ it("AI API follows Ask/Search contracts and forwards cancellation with sufficien
     { signal, timeout: 180000 },
   );
 });
+
+import { getPullRequests, getPullRequest } from "../src/api/pullRequests";
+it("PR API forwards bounded page inputs, detail number and cancellation", async () => {
+  const signal = new AbortController().signal;
+  await getPullRequests(12, 2, 20, signal);
+  expect(api.get).toHaveBeenCalledWith("/api/repositories/12/pull-requests", { params: { page: 2, size: 20 }, signal });
+  await getPullRequest(12, 42, signal);
+  expect(api.get).toHaveBeenCalledWith("/api/repositories/12/pull-requests/42", { signal, timeout: 180000 });
+});
+
+import { reviewPullRequest } from "../src/api/pullRequests";
+it("review API posts snapshot constraints with cancellation", async () => {
+  const signal = new AbortController().signal, body = { expectedHeadSha: "a".repeat(40) };
+  await reviewPullRequest(12, 42, body, signal);
+  expect(api.post).toHaveBeenCalledWith("/api/repositories/12/pull-requests/42/review", body, { signal, timeout: 900000 });
+});
+
+import { getArchitecture } from "../src/api/architecture";
+it("architecture API forwards cancellation without AI request data", async () => {
+  const controller = new AbortController();
+  await getArchitecture(12, controller.signal);
+  expect(api.get).toHaveBeenCalledWith("/api/repositories/12/architecture", { signal: controller.signal, timeout: 60000 });
+});
+
+import { askArchitecture } from "../src/api/architecture";
+it("architecture ask endpoint forwards the bounded DTO and AbortSignal", async () => {
+  const signal = new AbortController().signal;
+  const request = { question: "Explain", selectedComponentId: "actual-id", indexCommitSha: "a".repeat(40) };
+  await askArchitecture(12, request, signal);
+  expect(api.post).toHaveBeenCalledWith("/api/repositories/12/architecture/ask", request, { signal, timeout: 420000 });
+});

@@ -2,11 +2,8 @@ package com.devpilot.indexing;
 
 import com.sun.source.tree.*;
 import com.sun.source.util.*;
-import java.io.StringWriter;
-import java.net.URI;
 import java.util.*;
 import java.util.regex.*;
-import javax.tools.*;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -15,7 +12,7 @@ public class CodeChunker {
                         String symbolName, String symbolType, String contentHash) {
         @Override public String toString() { return "CodeChunk[REDACTED]"; }
     }
-    private record Symbol(int start, int end, String name, String type) {}
+    public record Symbol(int start, int end, String name, String type) {}
     private static final Pattern PYTHON = Pattern.compile("^(\\s*)(?:async\\s+)?(def|class)\\s+([A-Za-z_][\\w]*)");
     private static final Pattern SCRIPT = Pattern.compile("(?:^|\\s)(?:export\\s+)?(?:default\\s+)?(?:async\\s+)?(function|class)\\s+([A-Za-z_$][\\w$]*)|(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=.*=>");
     private final IndexingProperties properties;
@@ -64,21 +61,20 @@ public class CodeChunker {
         }
         return result;
     }
+    public List<Symbol> symbols(String source, String language) {
+        try {
+            var result = switch(language) {
+                case "JAVA" -> javaSymbols(source);
+                case "PYTHON" -> pythonSymbols(Arrays.asList((source.endsWith("\n") ? source.substring(0, source.length()-1) : source).split("\n", -1)));
+                case "JAVASCRIPT", "JAVASCRIPT_REACT", "TYPESCRIPT", "TYPESCRIPT_REACT" -> scriptSymbols(source);
+                default -> List.<Symbol>of();
+            };
+            return result.size() <= 1000 ? result : List.of();
+        } catch (RuntimeException | StackOverflowError ex) { return List.of(); }
+    }
     private List<Symbol> javaSymbols(String source) {
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        if (compiler == null) return List.of();
-        var diagnostics = new DiagnosticCollector<JavaFileObject>();
-        var file = new SimpleJavaFileObject(URI.create("string:///Source.java"), JavaFileObject.Kind.SOURCE) {
-            @Override public CharSequence getCharContent(boolean ignoreEncodingErrors) { return source; }
-        };
-        try (var manager = compiler.getStandardFileManager(diagnostics, Locale.ROOT, java.nio.charset.StandardCharsets.UTF_8)) {
-            var task = (JavacTask) compiler.getTask(new StringWriter(), manager, diagnostics,
-                    List.of("-proc:none"), null, List.of(file));
-            var units = task.parse(); // Parse only: no analysis, compilation, processors, or execution.
-            if (diagnostics.getDiagnostics().stream().anyMatch(d -> d.getKind() == Diagnostic.Kind.ERROR)) return List.of();
-            var positions = Trees.instance(task).getSourcePositions();
-            var symbols = new ArrayList<Symbol>();
-            for (var unit : units) {
+        var symbols = new ArrayList<Symbol>();
+        boolean parsed = JavaSourceParser.parse(source, (unit, positions) -> {
                 new TreeScanner<Void, String>() {
                     private void add(Tree node, String name, String type) {
                         long start = positions.getStartPosition(unit, node), end = positions.getEndPosition(unit, node);
@@ -96,9 +92,8 @@ public class CodeChunker {
                         return super.visitMethod(node, parent);
                     }
                 }.scan(unit, null);
-            }
-            return symbols;
-        } catch (java.io.IOException ex) { return List.of(); }
+        });
+        return parsed ? symbols : List.of();
     }
     private List<Symbol> pythonSymbols(List<String> lines) {
         var result = new ArrayList<Symbol>();

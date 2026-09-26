@@ -1,3 +1,4 @@
+import ArchitecturePage from "./pages/ArchitecturePage";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
@@ -8,6 +9,7 @@ import AppShell from "./layouts/AppShell";
 import GitHubPage from "./pages/GitHubPage";
 import RepositoriesPage from "./pages/RepositoriesPage";
 import RepositoryDetailPage from "./pages/RepositoryDetailPage";
+import PullRequestsPage from "./pages/PullRequestsPage";
 import IntelligencePage from "./pages/IntelligencePage";
 import RepositoryPicker from "./components/intelligence/RepositoryPicker";
 import "./styles/global.css";
@@ -30,6 +32,9 @@ createRoot(document.getElementById("root")).render(
               path="/search"
               element={<RepositoryPicker kind="search" />}
             />
+            <Route path="/repositories/:id/architecture" element={<ArchitecturePage />} />
+            <Route path="/repositories/:id/pull-requests" element={<PullRequestsPage />} />
+            <Route path="/repositories/:id/pull-requests/:number" element={<PullRequestsPage />} />
             <Route path="/github" element={<GitHubPage />} />
             <Route path="/repositories" element={<RepositoriesPage />} />
             <Route

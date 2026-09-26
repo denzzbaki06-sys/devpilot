@@ -47,3 +47,6 @@ frontend/dist/
 /uploads/
 /tmp/
 /temp/
+
+# Test coverage output
+coverage/

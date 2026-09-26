@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { version } from "../../package.json";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
@@ -24,6 +24,26 @@ export default function AppShell() {
   const { user, logout } = useAuth(),
     [open, setOpen] = useState(false),
     location = useLocation();
+  const sidebar = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.activeElement;
+    const focusable = () => [...sidebar.current.querySelectorAll("a[href], button:not(:disabled)")];
+    focusable()[0]?.focus();
+    function keyboard(event) {
+      if (event.key === "Escape") { event.preventDefault(); setOpen(false); }
+      if (event.key === "Tab") {
+        const items = focusable(), first = items[0], last = items.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
+    }
+    const desktop = window.matchMedia?.("(min-width: 761px)");
+    const resized = () => { if (desktop.matches) setOpen(false); };
+    document.addEventListener("keydown", keyboard);
+    desktop?.addEventListener("change", resized);
+    return () => { document.removeEventListener("keydown", keyboard); desktop?.removeEventListener("change", resized); previous?.focus(); };
+  }, [open]);
   const title =
     {
       "/dashboard": "Overview",
@@ -33,7 +53,9 @@ export default function AppShell() {
       "/ask": "Ask DevPilot",
       "/search": "Semantic Search",
     }[location.pathname] ||
-    (location.pathname.endsWith("/ask")
+    (location.pathname.includes("/architecture") ? "Architecture" : location.pathname.includes("/pull-requests")
+      ? "Pull Requests"
+      : location.pathname.endsWith("/ask")
       ? "Ask DevPilot"
       : location.pathname.endsWith("/search")
         ? "Semantic Search"
@@ -52,7 +74,7 @@ export default function AppShell() {
           onClick={() => setOpen(false)}
         />
       )}
-      <aside className={`sidebar ${open ? "open" : ""}`}>
+      <aside id="workspace-navigation" ref={sidebar} className={`sidebar ${open ? "open" : ""}`} role={open ? "dialog" : undefined} aria-modal={open ? true : undefined} aria-label="Workspace navigation">
         <div className="sidebar-brand">
           <Brand />
           <button
@@ -134,13 +156,14 @@ export default function AppShell() {
           </button>
         </div>
       </aside>
-      <div className="workspace-main">
+      <div className="workspace-main" inert={open ? true : undefined}>
         <header className="topbar">
           <div>
             <button
               className="icon-button mobile-only"
               aria-label="Open navigation"
               aria-expanded={open}
+              aria-controls="workspace-navigation"
               onClick={() => setOpen(true)}
             >
               <Menu size={20} />
