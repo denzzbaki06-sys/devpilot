@@ -1,29 +1,31 @@
 # DevPilot
 
-**AI-Powered Code Intelligence Workspace**
+**AI-Powered Code Intelligence & Repository Architecture Platform**
+
+[Release v1.1.0](https://github.com/denzzbaki06-sys/devpilot/releases/tag/v1.1.0)
 
 ## Overview
 
-DevPilot connects repository source, pull request changes and architecture evidence
-in one developer workspace. Connect GitHub, index source code, search by meaning,
-ask source-backed questions, review PRs and explore an interactive architecture map.
+DevPilot connects to GitHub repositories, indexes and understands source code,
+enables semantic code search and grounded repository Q&A, reviews pull requests
+with repository context, and builds interactive, source-backed architecture maps.
 AI output is an additional engineering signal; validated citations establish its
 source references, not the correctness of every conclusion.
 
 ## Key Features
 
 - User authentication with BCrypt, JWT access tokens and rotating refresh tokens
-- GitHub OAuth and public/private repositories accessible to the connected user
+- GitHub repository integration with OAuth + PKCE and encrypted token storage
 - Async repository ingestion, language-aware parsing and bounded code chunking
 - OpenAI-compatible embeddings, PostgreSQL/pgvector semantic code search
-- Grounded repository Q&A with validated source IDs and actual file/line references
+- Grounded RAG repository Q&A with validated source IDs and file/line-level citations
 - Prompt-injection-aware context handling and explicit insufficient-evidence responses
 - Staged indexing and atomic publication for safe reindexing
-- Read-only AI PR review with normalized diffs and validated diff/source references
-- Deterministic architecture extraction and an interactive, searchable dependency graph
+- Read-only AI pull request review and diff intelligence with validated source references
+- Deterministic architecture extraction and an interactive React Flow + Dagre graph
 - Architecture-aware AI Q&A, Explain Component/Connections and graph-linked citations
 - React workspace for repositories, indexing, Ask, Search, PRs and Architecture
-- Dockerized full stack and GitHub Actions backend/frontend checks
+- Dockerized full stack, Flyway migrations and GitHub Actions backend/frontend checks
 
 ## Architecture / How It Works
 
@@ -72,9 +74,10 @@ heuristics; unsupported structures fall back to overlapping line chunks.
 | --- | --- |
 | Backend | Java 21, Spring Boot 4.1.1, Spring Security, JPA, Flyway, JJWT |
 | Data | PostgreSQL 17, pgvector; vector dimensions fixed at 1536 |
-| Frontend | React 19, Vite, Axios, React Router; Node 26 for build/CI |
+| Frontend | React 19, Vite, Axios, React Router, React Flow, Dagre; Node 26 for build/CI |
 | AI | OpenAI-compatible embedding and chat completion providers; explicit RAG services |
-| Infrastructure | Docker Compose, Nginx, GitHub Actions |
+| Integration | GitHub API, GitHub OAuth + PKCE |
+| Infrastructure | Docker Compose, Nginx, Flyway, GitHub Actions |
 
 ## Getting Started — Docker
 
@@ -236,7 +239,10 @@ against prompt injection. Answers require human review.
 - BCrypt password hashing; JWT access tokens; rotating opaque refresh tokens stored
   only as hashes in the database.
 - OAuth state, PKCE and browser binding; AES-256-GCM encryption for stored GitHub tokens.
-- Ownership checks on repository/index/search/Ask operations; safe API error messages.
+- Repository ownership checks across indexing, search, Q&A, PR and architecture operations;
+  safe API error messages.
+- Validated AI source/diff/architecture references and prompt-injection-aware RAG;
+  citation validation does not guarantee answer correctness or prevent every injection.
 - Secret-file/path ingestion filtering and bounded input sizes. This is not a complete
   content secret scanner: inspect repositories before sending code to external providers.
 - Repository chunks are sent to the configured embedding/chat services. Choose a
@@ -254,6 +260,11 @@ publicly. Authentication throttling, managed secret rotation and TLS termination
 not provided here. Do not dump resolved Compose environment configuration into logs.
 
 ## Testing and CI
+
+v1.1.0 release validation: **404 backend tests** and **250 frontend tests** passed;
+frontend lint and production build passed. The Docker stack and PostgreSQL + pgvector
+were validated, and applied Flyway V1–V9 migrations were preserved. Main and tag CI
+passed. These checks used test doubles for external providers, not live integrations.
 
 Backend integration tests need a disposable PostgreSQL database with pgvector and
 migration privileges. Tests create and clean their own fixture users/repositories;
@@ -277,9 +288,11 @@ them separately; use both checks before release.
 
 ## Version and release
 
-Backend, frontend and Compose image metadata are prepared for **1.1.0**. Existing Flyway V1–V9 migrations are
-immutable; schema changes require a new migration. No release/tag is created by
-this preparation. Before publication, run CI on GitHub and review deployment settings.
+[DevPilot v1.1.0](https://github.com/denzzbaki06-sys/devpilot/releases/tag/v1.1.0)
+is published; backend, frontend and Compose image metadata use **1.1.0**.
+The historical [v1.0.0 release](https://github.com/denzzbaki06-sys/devpilot/releases/tag/v1.0.0)
+remains unchanged. Applied Flyway V1–V9 migrations are immutable; schema changes
+require a new migration. Review deployment settings before running your own instance.
 Live GitHub/OpenAI validation is pending until credentials and an indexed repository
 are available; deterministic test providers are not proof of live integration.
 Choose a license before describing the project as open source. This repository does not currently grant an open-source license.
@@ -302,16 +315,17 @@ fabricated matches.
 
 ## AI Pull Request Review
 
-Browse open PRs and inspect changed-file diffs with separate old/new line numbers.
-For READY repositories, Analyze Pull Request combines bounded diff hunks and semantic
-context, then validates model references against actual changed lines and source
+GitHub PR ingestion retrieves changed files and normalized diffs with separate
+old/new line numbers. For READY repositories, Analyze Pull Request combines bounded
+diff hunks with repository semantic context, then validates AI review references
+against actual changed lines and source
 chunks. Findings include severity, explanation, recommendation and evidence. Skipped
 files and snapshot mismatches remain visible. No comments, reviews, patches or PR
 mutations are sent to GitHub.
 
 ## Architecture Intelligence
 
-Deterministic source analysis produces real components, directed relationships,
+Deterministic static source analysis, without an LLM, produces real components, directed relationships,
 entry points and evidence. Graph and Components views support search, filters,
 source locations and detail panels. React Flow is lazy-loaded; Dagre layout runs in
 a bounded Web Worker. No architecture embeddings or additional vector tables exist.
@@ -320,7 +334,8 @@ a bounded Web Worker. No architecture embeddings or additional vector tables exi
 
 Ask a repository-wide question, select a component, or use Explain Component and
 Explain Connections. Backend-resolved graph neighborhoods and semantic code chunks
-form bounded context. A/E/S citations select actual nodes, relationships and source
+form bounded, validated architecture context for AI explanations; the LLM does not
+create the architecture graph. A/E/S citations select actual nodes, relationships and source
 locations; Show in graph highlights existing components. Reindex changes invalidate
 stale responses. Missing providers return an explicit configuration error, never a
 sample answer. All AI questions are single-turn.
@@ -336,7 +351,8 @@ UI behavior and graph testing boundaries.
 - Java/Spring architecture extraction is strongest; JS/TS/Python support is lighter.
   Static relationships do not prove runtime call paths. Unresolved edges stay unresolved.
 - Large repositories/PRs use explicit budgets and can omit evidence. Warnings describe
-  scope. AI review can miss issues; valid citations do not prove every model claim.
+  scope, including bounded graph/context coverage. AI review can miss issues and should
+  complement human review; valid citations do not prove every model claim.
 - Source filtering and prompt isolation are defense in depth, not complete secret
   detection or a universal prompt-injection defense. Review private code/provider policy.
 - Source navigation currently exposes/copies file and line metadata; a full source
@@ -350,6 +366,6 @@ or nonexistent image files. Screenshots are optional release documentation.
 
 ## Roadmap / Future Work
 
-The next step is final validation, CI and v1.1.0 publication after explicit release
-authorization. Live external integration validation remains pending. Further product
-features are outside this release-polish scope.
+v1.1.0 is released. Live GitHub/OpenAI integration validation with valid configuration
+and an indexed repository remains pending. No future feature delivery is implied
+by this release.
